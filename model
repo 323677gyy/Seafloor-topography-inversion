@@ -207,7 +207,6 @@ class Model(torch.nn.Module):
             return loss, score
         return score
 
-# 核心数据读取与处理逻辑（仅保留框架，删除关键路径和参数）
 control = pd.read_csv('', sep='\t', header=None)
 check = pd.read_csv('', sep='\t', header=None)
 free = pygmt.grdcut(grid="", region="")
@@ -350,7 +349,6 @@ y_test = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
 x_test = torch.tensor(x_test, dtype=torch.float32).to(device)
 y_test = torch.tensor(y_test, dtype=torch.float32).to(device)
 
-# 模型初始化（删除配置文件路径）
 config = BertConfig.from_json_file('')
 model = Model(config).to(device)
 optimizer = optim.Adam(model.parameters(), lr=5e-5, weight_decay=1e-4)
@@ -378,16 +376,15 @@ for epoch in range(200):
         optimizer.zero_grad(set_to_none=True)
         with autocast():
             loss, _ = model(batch_x, batch_y)
-            loss = loss * 100.0  # 放大损失避免下溢
+            loss = loss * 100.0
         scaler.scale(loss).backward()
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
         scaler.step(optimizer)
         scaler.update()
-        epoch_loss += (loss.item() / 100.0)  # 还原损失值
+        epoch_loss += (loss.item() / 100.0)
         del batch_x, batch_y, loss
         torch.cuda.empty_cache()
-    # 计算平均损失
     avg_loss = epoch_loss / total_batches
     train_loss_history.append(avg_loss)
     # 每轮评估
@@ -396,20 +393,14 @@ for epoch in range(200):
         y_pred = model(x_test, None)
         test_mse = mean_squared_error(y_test.cpu(), y_pred.cpu())
         test_mse_history.append(test_mse)
-        # 保存最佳模型
         if test_mse < best_mse:
             best_mse = test_mse
             best_model = model.state_dict()
-
-        # 打印训练日志
         print(
             f"Epoch {epoch}, Loss: {avg_loss:.4f}, Test MSE: {test_mse:.4f}, LR: {optimizer.param_groups[0]['lr']:.2e}")
-    # 学习率调整
     reduce_lr.step(avg_loss)
     model.train()
 
-
-# 预测与保存（删除核心逻辑）
 if best_model is not None:
     model.load_state_dict(best_model)
 
